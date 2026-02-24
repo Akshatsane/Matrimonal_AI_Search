@@ -86,10 +86,10 @@
                         addMessage(data.matches, false, true);  // Display matches in a list
                         setTimeout(() => inputContainer.style.display = "none", 500);
                     } else {
-                        addMessage("❌ *No matches found. Try adjusting your preferences.*", false);
+                        addMessage(" *No matches found. Try adjusting your preferences.*", false);
                     }
                 } catch (error) {
-                    addMessage("⚠️ **Error:** Unable to connect to the server. Please try again later.", false);
+                    addMessage(" **Error:** Unable to connect to the server. Please try again later.", false);
                 }
             }
         }
