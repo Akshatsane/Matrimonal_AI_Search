@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrimonial Chatbot</title>
+    <link rel="stylesheet" href="styles/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chatbox"></div>
+        <div id="input-container">
+            <input type="text" id="userInput" placeholder="Ask a matchmaking query..." autofocus>
+            <button id="sendButton">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById("chatbox");
+        const inputContainer = document.getElementById("input-container");
+        const userInput = document.getElementById("userInput");
+        const sendButton = document.getElementById("sendButton");
+
+        const userDetails = JSON.parse(localStorage.getItem("userDetails"));
+
+        if (!userDetails) {
+            chatbox.innerHTML = "<p>Please complete the form first.</p>";
+            inputContainer.style.display = "none";
+        } else {
+            let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
+
+            function addMessage(text, isUser, isList = false) {
+                const messageDiv = document.createElement("div");
+                messageDiv.classList.add(isUser ? "user-message" : "bot-message");
+
+                if (isList) {
+                    const ul = document.createElement("ul");
+                    text.forEach(match => {
+                        const li = document.createElement("li");
+                        li.textContent = match;
+                        ul.appendChild(li);
+                    });
+                    messageDiv.appendChild(ul);
+                } else {
+                    // If the message is from the bot, render Markdown
+                    messageDiv.innerHTML = isUser ? text : marked.parse(text);
+                }
+
+                chatbox.appendChild(messageDiv);
+                chatbox.scrollTop = chatbox.scrollHeight;
+                chatHistory.push({ text, isUser, isList });
+                localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+            }
+
+            chatHistory.forEach(msg => {
+                addMessage(msg.text, msg.isUser, msg.isList);
+            });
+
+            if (chatHistory.length === 0) {
+                setTimeout(() => addMessage("👋 **Welcome!** Ask your matchmaking query.", false), 500);
+            }
+
+            sendButton.addEventListener("click", function () {
+                const query = userInput.value.trim();
+                if (!query) return;
+                addMessage(query, true);
+                userInput.value = "";
+                processMatchmaking(query);
+            });
+
+            async function processMatchmaking(query) {
+                addMessage("🔍 *Searching for your best matches...*", false);
+
+                try {
+                    const response = await fetch("http://localhost:8000/start_matchmaking", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ...userDetails, query })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.matches && data.matches.length > 0) {
+                        
+                        addMessage(data.matches, false, true);  // Display matches in a list
+                        setTimeout(() => inputContainer.style.display = "none", 500);
+                    } else {
+                        addMessage("❌ *No matches found. Try adjusting your preferences.*", false);
+                    }
+                } catch (error) {
+                    addMessage("⚠️ **Error:** Unable to connect to the server. Please try again later.", false);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
